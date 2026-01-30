@@ -1,7 +1,4 @@
 import streamlit as st
-import torch
-import torch.nn as nn
-from torchvision import models, transforms
 from PIL import Image
 from pathlib import Path
 import base64
@@ -87,12 +84,6 @@ st.markdown(f"""
         margin-right: auto;
     }}
 
-    /* MOBILE OPTIMIZED TABS & BUTTONS */
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 10px;
-        background-color: transparent;
-    }}
-
     .stButton > button {{
         width: 100%;
         background: transparent;
@@ -110,29 +101,15 @@ st.markdown(f"""
         color: black !important;
         box-shadow: 0 0 20px rgba(0, 210, 255, 0.6);
     }}
-
-    /* CAMERA WIDGET STYLING */
-    [data-testid="stCameraInput"] {{
-        border: 1px solid rgba(0, 210, 255, 0.3);
-        border-radius: 4px;
-    }}
     </style>
 """, unsafe_allow_html=True)
 
+# --- SIGHTENGINE CONFIG ---
+# These remain encoded as per your original script logic
 SYS_CFG = {
     "CORE_RES": "c2lnaHRlbmdpbmUuY2xpZW50",
     "CORE_CLS": "U2lnaHRlbmdpbmVDbGllbnQ="
 }
-
-# --- INTERNAL LOGIC ---
-@st.cache_resource
-def load_local_model():
-    model = models.resnet18(weights=None)
-    num_ftrs = model.fc.in_features
-    model.fc = nn.Sequential(nn.Dropout(0.5), nn.Linear(num_ftrs, 1), nn.Sigmoid())
-    if Path("resnet_ai_detector.pth").exists():
-        model.load_state_dict(torch.load("resnet_ai_detector.pth", map_location="cpu"))
-    return model.eval()
 
 def sys_probe(fb, u, s):
     try:
@@ -141,29 +118,27 @@ def sys_probe(fb, u, s):
         _mod = __import__(_m, fromlist=[_c])
         _cls = getattr(_mod, _c)
         _conn = _cls(u, s)
+        # Using the GenAI model specifically
         _res = _conn.check('genai').set_bytes(fb)
         if _res['status'] == 'success':
             return _res['type']['ai_generated'], "NEURAL_CLOUD_V4"
-    except: pass
+    except Exception as e:
+        st.error(f"Engine Connection Error: {e}")
     return None, None
 
 # --- UI HEADER ---
 st.markdown('<div class="logo-container"><span class="logo-text">AI IMAGE DETECTOR</span></div>', unsafe_allow_html=True)
 
-# --- LAYOUT LOGIC ---
+# --- LAYOUT ---
 if 'run_analysis' not in st.session_state:
     st.session_state['run_analysis'] = False
 
-# Layout: Main Preview on left/top, Controls on right/bottom
 col_main, col_spacer, col_side = st.columns([2.2, 0.1, 1.7], gap="small") 
 
-# Image Input Section
 with col_side:
     st.markdown("### 📡 DATA_CHANNEL")
     
-    # MOBILE OPTIMIZATION: Toggle between Camera and Upload
     input_mode = st.tabs(["📸 CAMERA", "📁 UPLOAD"])
-    
     input_file = None
     
     with input_mode[0]:
@@ -182,60 +157,50 @@ with col_side:
             
         if st.session_state['run_analysis']:
             file_bytes = input_file.getvalue()
-            img_process = Image.open(input_file).convert("RGB")
             
-            with st.spinner("SCANNING NEURAL SIGNATURES..."):
-                api_score, api_label = sys_probe(
+            with st.spinner("QUERYING CLOUD NEURAL ENGINE..."):
+                ai_prob, engine_label = sys_probe(
                     file_bytes, 
                     "1821315875", 
                     "vhorLMbekgBS36Jy9QfTAh49TdBrZDpu"
                 )
-                
-                local_model = load_local_model()
-                transform = transforms.Compose([
-                    transforms.Resize((224, 224)), transforms.ToTensor(),
-                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-                ])
-                input_tensor = transform(img_process).unsqueeze(0)
-                with torch.no_grad():
-                    local_score = local_model(input_tensor).item()
 
-                ai_prob = api_score if api_score is not None else local_score
-                real_prob = 1.0 - ai_prob
-                is_ai = ai_prob > 0.5
+                if ai_prob is not None:
+                    real_prob = 1.0 - ai_prob
+                    is_ai = ai_prob > 0.5
 
-                color = "#ff4b4b" if is_ai else "#00d2ff"
-                verdict = "AI_GENERATED" if is_ai else "HUMAN_ORIGIN"
-                
-                st.markdown(f"""
-                    <div class="hud-card">
-                        <span class="status-badge" style="border-color: {color}; color: {color};">VERDICT: {verdict}</span>
-                        <h3 style="margin: 15px 0; font-weight: 200; font-size: 0.9rem;">ANALYSIS_COMPLETED</h3>
-                        <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.8rem;">
-                            <span style="color: #888;">AI_PROBABILITY</span>
-                            <span style="color: #ff4b4b; font-weight: bold;">{ai_prob*100:.2f}%</span>
+                    color = "#ff4b4b" if is_ai else "#00d2ff"
+                    verdict = "AI_GENERATED" if is_ai else "HUMAN_ORIGIN"
+                    
+                    st.markdown(f"""
+                        <div class="hud-card">
+                            <span class="status-badge" style="border-color: {color}; color: {color};">VERDICT: {verdict}</span>
+                            <h3 style="margin: 15px 0; font-weight: 200; font-size: 0.9rem;">ANALYSIS_COMPLETED</h3>
+                            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.8rem;">
+                                <span style="color: #888;">AI_PROBABILITY</span>
+                                <span style="color: #ff4b4b; font-weight: bold;">{ai_prob*100:.2f}%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.8rem;">
+                                <span style="color: #888;">REAL_INTEGRITY</span>
+                                <span style="color: #00d2ff; font-weight: bold;">{real_prob*100:.2f}%</span>
+                            </div>
+                            <hr style="opacity: 0.1; margin: 15px 0;">
+                            <p style="font-size: 0.6rem; color: #555; line-height: 1.4;">
+                                ENGINE: {engine_label}<br>
+                                SCAN_MODE: PIXEL_DISTRIBUTION_FORENSICS
+                            </p>
                         </div>
-                        <div style="display: flex; justify-content: space-between; margin: 8px 0; font-size: 0.8rem;">
-                            <span style="color: #888;">REAL_INTEGRITY</span>
-                            <span style="color: #00d2ff; font-weight: bold;">{real_prob*100:.2f}%</span>
-                        </div>
-                        <hr style="opacity: 0.1; margin: 15px 0;">
-                        <p style="font-size: 0.6rem; color: #555; line-height: 1.4;">
-                            DETECTION_ENGINE: {api_label if api_score is not None else 'LOCAL_RESNET_V1'}<br>
-                            SCAN_MODE: PIXEL_DISTRIBUTION_FORENSICS
-                        </p>
-                    </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+                else:
+                    st.error("Protocol Failed. Check API Credits or Internet Connection.")
     else:
         st.info("AWAITING SOURCE DATA...")
 
-# Main Image Preview Section
 with col_main:
     if input_file:
         img_display = Image.open(input_file).convert("RGB")
         st.image(img_display, caption="[ SOURCE_DATA_PREVIEW ]")
     else:
-        # Placeholder for empty state
         st.markdown("""
             <div style="height: 50vh; border: 1px dashed rgba(0,210,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #333;">
                 NO_FEED_DETECTED
