@@ -6,7 +6,7 @@ import base64
 st.set_page_config(page_title="AI Image Detector", page_icon="🕵️", layout="wide")
 
 # --- ADVANCED UI ARCHITECTURE ---
-st.markdown(f"""
+st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap');
 
@@ -204,3 +204,4 @@ with col_main:
                 NO_FEED_DETECTED
             </div>
         """, unsafe_allow_html=True)
+
