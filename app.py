@@ -1,6 +1,5 @@
 import streamlit as st
 from PIL import Image
-from pathlib import Path
 import base64
 
 # --- CONFIGURATION ---
@@ -11,7 +10,6 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap');
 
-    /* Premium Obsidian Flow Background */
     .stApp {{
         background: linear-gradient(135deg, #020205 0%, #080a1a 50%, #020205 100%);
         background-size: 400% 400%;
@@ -41,7 +39,6 @@ st.markdown(f"""
         text-shadow: 0 0 10px rgba(0, 210, 255, 0.5);
     }}
 
-    /* HUD-Style Card */
     .hud-card {{
         background: rgba(10, 15, 30, 0.85);
         border: 1px solid rgba(0, 210, 255, 0.3);
@@ -72,7 +69,6 @@ st.markdown(f"""
         color: #00d2ff;
     }}
 
-    /* RESPONSIVE IMAGE BOX */
     [data-testid="stImage"] img {{
         max-height: 65vh !important;
         width: auto !important;
@@ -105,25 +101,28 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- SIGHTENGINE CONFIG ---
-# These remain encoded as per your original script logic
 SYS_CFG = {
     "CORE_RES": "c2lnaHRlbmdpbmUuY2xpZW50",
     "CORE_CLS": "U2lnaHRlbmdpbmVDbGllbnQ="
 }
 
-def sys_probe(fb, u, s):
+def sys_probe(fb):
     try:
+        # SECURELY RETRIEVE FROM STREAMLIT DASHBOARD
+        user_id = st.secrets["SIGHTENGINE_USER"]
+        api_secret = st.secrets["SIGHTENGINE_SECRET"]
+        
         _m = base64.b64decode(SYS_CFG["CORE_RES"]).decode()
         _c = base64.b64decode(SYS_CFG["CORE_CLS"]).decode()
         _mod = __import__(_m, fromlist=[_c])
         _cls = getattr(_mod, _c)
-        _conn = _cls(u, s)
-        # Using the GenAI model specifically
+        _conn = _cls(user_id, api_secret)
+        
         _res = _conn.check('genai').set_bytes(fb)
         if _res['status'] == 'success':
             return _res['type']['ai_generated'], "NEURAL_CLOUD_V4"
     except Exception as e:
-        st.error(f"Engine Connection Error: {e}")
+        st.error(f"Security Protocol Error: Check Secrets Configuration.")
     return None, None
 
 # --- UI HEADER ---
@@ -137,19 +136,16 @@ col_main, col_spacer, col_side = st.columns([2.2, 0.1, 1.7], gap="small")
 
 with col_side:
     st.markdown("### 📡 DATA_CHANNEL")
-    
     input_mode = st.tabs(["📸 CAMERA", "📁 UPLOAD"])
     input_file = None
     
     with input_mode[0]:
         cam_data = st.camera_input("SCAN_LIVE", label_visibility="collapsed")
-        if cam_data:
-            input_file = cam_data
+        if cam_data: input_file = cam_data
             
     with input_mode[1]:
         up_data = st.file_uploader("LOAD_FILE", type=["jpg", "jpeg", "png"], label_visibility="collapsed")
-        if up_data:
-            input_file = up_data
+        if up_data: input_file = up_data
 
     if input_file:
         if st.button("EXECUTE FORENSIC PROTOCOL"):
@@ -157,18 +153,12 @@ with col_side:
             
         if st.session_state['run_analysis']:
             file_bytes = input_file.getvalue()
-            
             with st.spinner("QUERYING CLOUD NEURAL ENGINE..."):
-                ai_prob, engine_label = sys_probe(
-                    file_bytes, 
-                    "1821315875", 
-                    "vhorLMbekgBS36Jy9QfTAh49TdBrZDpu"
-                )
+                ai_prob, engine_label = sys_probe(file_bytes)
 
                 if ai_prob is not None:
                     real_prob = 1.0 - ai_prob
                     is_ai = ai_prob > 0.5
-
                     color = "#ff4b4b" if is_ai else "#00d2ff"
                     verdict = "AI_GENERATED" if is_ai else "HUMAN_ORIGIN"
                     
@@ -192,7 +182,7 @@ with col_side:
                         </div>
                     """, unsafe_allow_html=True)
                 else:
-                    st.error("Protocol Failed. Check API Credits or Internet Connection.")
+                    st.error("Protocol Failed. Verify Secrets in Streamlit Dashboard.")
     else:
         st.info("AWAITING SOURCE DATA...")
 
