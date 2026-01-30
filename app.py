@@ -10,22 +10,18 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap');
 
-    /* HIDES THE GITHUB ID, TOOLBAR, AND FOOTER */
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    
-    /* HIDES THE MOBILE FLOATING BUTTON (AVATAR & LOGO) */
-    .stDeployButton {
-        display: none !important;
-    }
-    #stDecoration {
-        display: none !important;
-    }
+    /* AGGRESSIVE BRANDING REMOVAL */
+    #MainMenu {visibility: hidden !important;}
+    header {visibility: hidden !important;}
+    footer {visibility: hidden !important;}
+    .stDeployButton {display: none !important;}
+    #stDecoration {display: none !important;}
+    [data-testid="stHeader"] {display: none !important;}
+    [data-testid="stToolbar"] {display: none !important;}
 
-    /* REMOVES EXTRA TOP PADDING */
+    /* REMOVES EXTRA TOP PADDING FOR FULLSCREEN LOOK */
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1rem !important;
     }
 
     /* Premium Obsidian Flow Background */
